@@ -1,0 +1,31 @@
+name: UDP baseline on macOS
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ .github/workflows/udp-baseline.yml ]
+  workflow_dispatch:
+
+jobs:
+  udp-baseline:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - name: Checkout upstream baseline
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: 16e8d488ee1d9ede35ab9cf21b9973ffdc9361b3
+          persist-credentials: false
+
+      - name: Apply regression tests only
+        run: |
+          git fetch --no-tags --depth=1 origin 623da6d000d7b5457531aa64fcba6f80b110a8e3
+          git restore --source=FETCH_HEAD -- Tests/SocketForwarderTests/UDPEchoServer.swift Tests/SocketForwarderTests/UDPForwarderTest.swift
+          git diff --exit-code HEAD -- Sources/
+          git diff --stat HEAD
+
+      - name: Run UDP tests against unmodified forwarder
+        run: swift test --filter UDPForwarderTest
